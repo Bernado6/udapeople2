@@ -67,9 +67,9 @@ jobs:
       - run:
           name: Build front-end
           command: |
+            # Your code here
             cd frontend
-            npm install --force
-            npm audit fix -force
+            npm install
             npm run build
       - save_cache:
           paths: [frontend/node_modules]
@@ -85,77 +85,116 @@ jobs:
       - run:
           name: Back-end build
           command: |
-            cd backend
-            npm install --force
-            npm audit fix -force
-            npm run build
+             # Your code here
+             cd backend
+             npm install
+             npm run build
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
 
   test-frontend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
+      # Checkout code from git
       - checkout
+      # Restore from cache
       - restore_cache:
-          keys: [frontend-build]
+          keys: [frontend-test]
+      # Your job code here
       - run:
-          name: frontend-test
+          name: Run front-end test
           command: |
+            # Your code here
             cd frontend
-            npm install --force
+            npm install
             npm run test
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-test
                 
   test-backend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
+      # Checkout code from git
       - checkout
+      # Restore from cache
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-test]
+      # Your job code here
       - run:
-          name: backend-test
+          name: Run back-end test
           command: |
+            # Your code here
             cd backend
-            npm install --force
+            npm install
             npm run test
-
+      - save_cache:
+          paths: [backend/node_modules]
+          key: backend-test
+            
   scan-frontend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
+      # Checkout code from git
       - checkout
+      # Restore from cache
       - restore_cache:
-          keys: [frontend-build]
+          keys: [scan-frontend]
+      # Your job code here
       - run:
-          name: scan frontend
+          name: Scan frontend
           command: |
+            # Your code here
             cd frontend
-            npm install --force
+            npm install
+            # Don't use the --force option with the command below in your local
             npm audit fix --audit-level=critical --force
+            
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: scan-frontend  
 
   scan-backend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
+      # Checkout code from git
       - checkout
+      # Restore from cache
       - restore_cache:
-          keys: [backend-build]
+          keys: [scan-backend]
+      # Your job code here
       - run:
-          name: scan backend
+          name: Scan backend
           command: |
+            # Your code here
             cd backend
-            npm install --force
+            npm install
+            # Don't use the --force option with the command below in your local
             npm audit fix --audit-level=critical --force
+            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
+      - save_cache:
+          paths: [backend/node_modules]
+          key: scan-backend
 
   deploy-infrastructure:
     docker:
+      # Docker image here that supports AWS CLI
       - image: amazon/aws-cli
     steps:
+      # Checkout code from git
       - checkout
       - run:
-          name: Install tar utility
+          name: Install dependencies
           command: |
             yum install -y tar gzip
       - run:
@@ -164,30 +203,33 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=udapeople                      
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
+              --tags project=udapeople
+            
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --tags project=udapeople \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"          
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
+              --tags project=udapeople
+            
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            export BACKEND_IP=$(aws ec2 describe-instances \
+            # Your code here
+            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=udapeople" \
               --output text)
-            echo ${BACKEND_IP} > .circleci/ansible/inventory.txt
+            echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+      # Here's where you will add some code to rollback on failure 
 
   configure-infrastructure:
     docker:
@@ -195,7 +237,7 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-          fingerprints: ["c9:40:ea:39:ca:65:dc:b0:b9:be:75:90:fc:9c:72:04"]
+          fingerprints: ["a4:d4:76:90:e3:ec:43:3e:7e:23:76:22:4d:79:af:f4"]
       - attach_workspace:
           at: ~/
       - run:
@@ -216,7 +258,7 @@ jobs:
             echo TYPEORM_MIGRATIONS_DIR=/home/ubuntu/udaapp/migrations  >> backend/.env
             echo TYPEORM_MIGRATIONS=/home/ubuntu/udaapp/migrations/*.js >> backend/.env
             echo TYPEORM_ENTITIES=/home/ubuntu/udaapp/modules/domain/**/*.entity.js >> backend/.env
-            echo TYPEORM_HOST=database-1.cjip2vcmn4xa.us-east-1.rds.amazonaws.com >> backend/.env
+            echo TYPEORM_HOST=database-1.cys59nkta9ig.us-east-1.rds.amazonaws.com >> backend/.env
             echo TYPEORM_PORT=5432 >> backend/.env
             echo TYPEORM_USERNAME=postgres >> backend/.env
             echo TYPEORM_PASSWORD=postgres >> backend/.env
